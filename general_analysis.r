@@ -100,7 +100,28 @@ ggplot(survey %>% split_factor_levels_with_newlines('region'),
   theme_bw() + better_text_size_manylabs + 
   facet_grid(~region)
 
+#what day do they celebrate?
+ggplot(survey %>% 
+         filter(celebrates_christmas=="Yes" & celebration_date != ''))+
+  stat_count(aes(x=celebration_date, y=..prop.., group=1), fill='#33DD33') + 
+  scale_y_continuous(label=percent) + xlab('') + ylab('') + 
+  geom_text(aes_(group=1, x=~celebration_date, y=~..prop.., label=bquote(.(smart_percent)(..prop.., ..count..))), 
+            vjust='inward', size=6, stat='count') + 
+  ggtitle('Question: What activities do you do on Christmas?') + 
+  better_text_size_manylabs 
 
+ggplot(survey %>% 
+         filter(celebrates_christmas=="Yes" & celebration_date != ''))+
+  stat_count(aes(x=celebration_date, y=..prop.., group=1), fill='#EE3333') + 
+  scale_y_continuous(label=percent) + xlab('') + ylab('') + 
+  geom_text(aes_(group=1, x=~celebration_date, y=~..prop.., label=bquote(.(smart_percent)(..prop.., ..count..))), 
+            vjust='inward', size=6, stat='count') + 
+  ggtitle('Question: What activities do you do on Christmas?', subtitle='Grouped by religion') + 
+  better_text_size_manylabs +
+  facet_grid(religion~.)
+  
+
+#activities
 #overall
 ggplot(activities %>% filter(activities_value==1), 
        aes(x=activities, group=1))  + stat_count(aes(y=(..prop..)),fill='#33EE33') + 
@@ -124,6 +145,7 @@ ggplot(activities %>%
   coord_flip() + better_text_size_manylabs + 
   facet_grid(~celebrates_christmas)
   
+
        
 #by gender
 ggplot(activities %>% 
