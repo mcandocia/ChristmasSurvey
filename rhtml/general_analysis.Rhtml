@@ -1,0 +1,227 @@
+
+
+<p> This December, I surveyed a few hundred users from Reddit, Facebook, and, to a lesser extent, other social media sources on how they celebrated (or didn't celebrate) Christmas. You can find an active version of the survey <a href="https://docs.google.com/forms/d/e/1FAIpQLSchazyjPQHZFy67vtuKSHBt8ffv9LZCNW6-zTLqA0P1i3FHBQ/viewform?usp=sf_link#responses" target="_blank" id="christmas_survey_inarticle1_out">here </a>. I automatically generate a good portion of this article, so I may update it in the future.</p>
+
+<p> This is the first article using this data out of a few that I will be posting in the next few days. The primary goal of this article is to visualize the overall responses to some of the main questions, divide them into groups, and provide some commentary on them. The following articles will dive deeper into different aspects, including when kids learn that Santa isn't real, what words people use to describe Christmas, and various foods, desserts, and drinks that people consume.</p>
+
+<!--begin.rcode echo=FALSE, message=FALSE, warning=FALSE
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(reshape2)
+library(scales)
+library(cetcolor)
+library(knitr)
+source('plotting_functions.r')
+
+survey = read.csv('data/clean_survey.csv') %>% fix_factors()
+survey_categories = read.csv('data/survey_categories.csv') %>% fix_factors()
+
+#what activities do you do on christmas?
+activities = gather_category(survey_categories, 'activities_')
+activities = activities %>% mutate(activities = mapvalues(activities, from='', to='None of the Above'),
+                    celebrates_christmas = mapvalues(celebrates_christmas, from=c('Yes','No'), 
+              to = c('Celebrates Christmas','Doesn\'t Celebrate Christmas')))
+
+
+
+#separate data for questions that only apply to those who celebrate christmas
+survey_celebrates = survey %>% filter(celebrates_christmas=='Yes')
+survey_categories_celebrates = survey %>% filter(celebrates_christmas=='Yes')
+end.rcode-->
+
+<h2> Demographics </h2>
+
+<p> In the survey I asked about gender, religion, and region of the US (or outside the US). I did not include race, as I will be making the survey responses public, and that may provide too much identifying information for some people's comfort. The most notable demographic biases that are not particularly representative of the US as a whole are the overrepresentation of the Midwest, a large number of atheist/agnostic responders, as well as a notable percent of responders outside of the US.</p>
+
+
+<!--begin.rcode demographics-gender, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE
+#what do the demographics look like
+#gender
+
+ggplot(survey, aes(x=gender,  group=1)) + stat_count(aes(y=(..prop..)),fill='#EE3333') + 
+  geom_text(aes(y=..prop.., label=utils::getAnywhere('smart_percent')$objs[[1]](..prop.., ..count..)), 
+            stat='count', vjust='inward', size=6) + 
+  ylab('') + xlab('') + 
+  scale_y_continuous(label=percent, breaks = seq(0,0.6,0.1)) + 
+  ggtitle('Gender of Christmas Survey Responses') + 
+  theme_bw() + better_text_size
+  
+end.rcode-->
+
+<!--begin.rcode demographics-religion, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE
+#religion
+ggplot(survey, aes(x=religion,  group=1)) + stat_count(aes(y=(..prop..)),fill='#33EE33') + 
+  geom_text(aes(y=..prop.., label=utils::getAnywhere('smart_percent')$objs[[1]](..prop.., ..count..)), 
+            stat='count', hjust='inward', size=6) + 
+  ylab('') + xlab('') + 
+  scale_y_continuous(label=percent, breaks = seq(0,0.6,0.1), sec.axis=dup_axis()) + 
+  ggtitle('Religion of Christmas Survey Responses') + 
+  theme_bw() + better_text_size_manylabs + 
+  coord_flip() + scale_x_discrete(limits=rev(levels(survey$religion)))
+end.rcode-->
+
+<!--begin.rcode demographics-region, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE
+#region
+ggplot(survey, aes(x=region,  group=1)) + stat_count(aes(y=(..prop..)),fill='#EE3333') + 
+  geom_text(aes(y=..prop.., label=utils::getAnywhere('smart_percent')$objs[[1]](..prop.., ..count..)), 
+            stat='count', hjust='inward', size=6) + 
+  ylab('') + xlab('') + 
+  scale_y_continuous(label=percent, breaks = seq(0,0.6,0.1), sec.axis=dup_axis()) + 
+  ggtitle('Region of Christmas Survey Responses') + 
+  theme_bw() + better_text_size_manylabs + 
+  coord_flip() + scale_x_discrete(limits=rev(levels(survey$region)))
+end.rcode-->
+
+<h2> Who Celebrates Christmas? </h2>
+
+<p> I also looked at who celebrates Christmas. Unsurprisingly, most of those who don't are not Christian. </p>
+
+#who celebrates christmas?
+<!--begin.rcode celebration-overall, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE
+#overall
+ggplot(survey, aes(x=celebrates_christmas,  group=1)) + stat_count(aes(y=(..prop..)),fill='#33EE33') + 
+  geom_text(aes(y=..prop.., label=utils::getAnywhere('smart_percent')$objs[[1]](..prop.., ..count..)), 
+            stat='count', vjust='inward', size=6) + 
+  ylab('') + xlab('response') + 
+  scale_y_continuous(label=percent, breaks = seq(0,0.6,0.1)) + 
+  ggtitle('Question: Do you Celebrate Christmas?') + 
+  theme_bw() + better_text_size
+end.rcode-->
+
+<!--begin.rcode celebration-gender, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE
+#by gender
+ggplot(survey, aes(x=celebrates_christmas,  group=1)) + stat_count(aes(y=(..prop..)),fill='#EE3333') + 
+  geom_text(aes(y=..prop.., label=utils::getAnywhere('smart_percent')$objs[[1]](..prop.., ..count..)), 
+            stat='count', vjust='inward', size=4.5) + 
+  ylab('') + xlab('response') + 
+  scale_y_continuous(label=percent, breaks = seq(0,1,0.1)) + 
+  ggtitle('Question: Do you Celebrate Christmas?',subtitle='grouped by gender') + 
+  theme_bw() + better_text_size + 
+  facet_grid(~gender)
+end.rcode-->
+
+<!--begin.rcode celebration-religion, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE
+#by religion
+ggplot(survey %>% split_factor_levels_with_newlines('religion'), 
+       aes(x=celebrates_christmas,  group=1)) + stat_count(aes(y=(..prop..)),fill='#33EE33') + 
+  geom_text(aes(y=..prop.., label=utils::getAnywhere('smart_percent')$objs[[1]](..prop.., ..count..)), 
+            stat='count', hjust='outward', size=6, angle=90) + 
+  ylab('') + xlab('') + 
+  scale_y_continuous(label=percent, breaks = seq(0,0.6,0.1), sec.axis=dup_axis()) + 
+  ggtitle('Question: Do you celebrate Christmas?', subtitle='grouped by religion') + 
+  theme_bw() + better_text_size_manylabs + 
+  facet_grid(~religion)
+end.rcode-->
+
+<!--begin.rcode celebration-region, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE
+#by region
+ggplot(survey %>% split_factor_levels_with_newlines('region'), 
+       aes(x=celebrates_christmas,  group=1)) + stat_count(aes(y=(..prop..)),fill='#EE3333') + 
+  geom_text(aes(y=..prop.., label=utils::getAnywhere('smart_percent')$objs[[1]](..prop.., ..count..)), 
+            stat='count', hjust='outward', size=6, angle=90) + 
+  ylab('') + xlab('') + 
+  scale_y_continuous(label=percent, breaks = seq(0,0.6,0.1), sec.axis=dup_axis()) + 
+  ggtitle('Question: Do you celebrate Christmas?', subtitle='grouped by region') + 
+  theme_bw() + better_text_size_manylabs + 
+  facet_grid(~region)
+end.rcode-->
+
+<h2> Activities on Christmas </h2>
+  <p> I also looked at some of the activities that users did on Christmas. </p>
+<!--begin.rcode activities-overall, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE
+#overall
+ggplot(activities %>% filter(activities_value==1), 
+       aes(x=activities, group=1))  + stat_count(aes(y=(..prop..)),fill='#33EE33') + 
+  geom_text(aes(y=..prop.., 
+                label=utils::getAnywhere('smart_percent')$objs[[1]](..prop.., ..count..)), 
+            stat='count', hjust='inward', size=6) + 
+  ylab('') + xlab('') + 
+  scale_y_continuous(label=percent, breaks = seq(0,0.6,0.1), sec.axis=dup_axis()) + 
+  ggtitle('Question: What activities do you do on Christmas?') + 
+  theme_bw() + better_text_size_manylabs + 
+  coord_flip()
+end.rcode-->
+
+<!--begin.rcode activities-bycelebration, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE
+#by celebration of Christmas
+ggplot(activities %>% 
+         calculate_group_stats('activities', 
+                               group_variables='celebrates_christmas')) +
+  geom_bar(aes(x=activities, y=prop), stat='identity', fill='#EE3333') + 
+  scale_y_continuous(label=percent) + xlab('') + ylab('') + 
+  geom_text(aes_(x=~activities, y=~prop, label=bquote(.(smart_percent)(prop, count))), hjust='inward', size=6) + 
+  ggtitle('Question: What activities do you do on Christmas?', subtitle='Grouped by celebration of Christmas') + 
+  coord_flip() + better_text_size_manylabs + 
+  facet_grid(~celebrates_christmas)
+end.rcode-->
+
+<!--begin.rcode activities-gender, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE     
+#by gender
+ggplot(activities %>% 
+         calculate_group_stats('activities', 
+                               group_variables='gender')) +
+  geom_bar(aes(x=activities, y=prop), stat='identity', fill='#33EE33') + 
+  scale_y_continuous(label=percent) + xlab('') + ylab('') + 
+  geom_text(aes_(x=~activities, y=~prop, label=bquote(.(smart_percent)(prop, count))), hjust='inward', size=6) + 
+  ggtitle('Question: What activities do you do on Christmas?', subtitle='Grouped by gender') + 
+  coord_flip() + better_text_size_manylabs + 
+  facet_grid(~gender)
+end.rcode-->
+
+<!--begin.rcode activities-religion, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE
+#by religion
+ggplot(activities %>% 
+         calculate_group_stats('activities', 
+                               group_variables='religion')) +
+  geom_tile(aes(x=religion, y=activities, fill=prop)) + 
+  geom_text(aes_(x=~religion, y=~activities, 
+                 label=bquote(.(smart_percent)(prop, count))), size=3) + 
+  ggtitle('Question: What activities do you do on Christmas?', subtitle='Grouped by religion') + 
+   better_text_size_tiled + 
+  scale_fill_gradientn('', colors=cet_pal(9, 'diverging_gwr_55-95_c38_n256'), label=percent) + 
+  theme(axis.text.x = element_text(angle=20))
+end.rcode-->
+
+#by region
+<!--begin.rcode activities-region, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE
+ggplot(activities %>% 
+         calculate_group_stats('activities', 
+                               group_variables='region')) +
+  geom_tile(aes(x=region, y=activities, fill=prop)) + 
+  geom_text(aes_(x=~region, y=~activities, 
+                 label=bquote(.(smart_percent)(prop, count))), size=3) + 
+  ggtitle('Question: What activities do you do on Christmas?', subtitle='Grouped by region of United States') + 
+  better_text_size_tiled + 
+  scale_fill_gradientn('', colors=cet_pal(9, 'diverging_gwr_55-95_c38_n256'), label=percent) + 
+  theme(axis.text.x = element_text(angle=20))
+end.rcode-->
+
+<h2> Which people hang out with their friends the most?</h2>
+
+<p> Looking at the above graphs, there are some correlations that have to do with oversampling from certain regions. For example, there are a high number of Evangelical Christian responses from the midwest, which is not representative of the overall structure of the survey. A statistical technique known as <a href="https://simple.wikipedia.org/wiki/Logistic_Regression" target="_blank" id="simplewiki_logistic_regression_out">logistic regression</a> can be used to determine what factors influence an outcome. In this case, I am testing to see if region, religion, gender, and/or celebration of Christmas affect individuals hanging out with friends on Christmas, since that is one of the categories that seems to have interesting correlations in the above graph.</p>  
+
+<p> Below is a snippet of code I used to test this out.</p>
+<!--
+#hmmm, so what makes someone more likely to actually spend time with friends/attend religious service?
+service_model = step(glm(activities_Attend.religious.service ~ religion + region + celebrates_christmas + gender, 
+                         family=binomial,
+                         data=survey_categories), 
+             k=log(nrow(survey)),
+             direction='both')
+-->
+<!--begin.rcode friends_model message=FALSE, warning=FALSE
+friends_model = step(glm(activities_Spend.time.with.friends ~ religion + region + celebrates_christmas + gender, 
+                         family=binomial,
+                         data=survey_categories), 
+                     k=log(nrow(survey)),
+                     direction='both')
+
+summary(friends_model)
+end.rcode-->
+
+<p> It turns out that the only significant factor in determining if one is more likely to spend time on Christmas with friends is whether or not they celebrate Christmas to begin with. I am guessing those who don't do not know too many people who aren't celebrating that day or are otherwise apathetic.</p>
+
+<h2> Source Code </h2>
+
+<p> I have the source code for my analysis on GitHub <a href=
