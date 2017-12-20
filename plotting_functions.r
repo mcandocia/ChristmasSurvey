@@ -34,6 +34,9 @@ better_text_size_tiled <- theme(axis.text=element_text(size=rel(1)),
                                    legend.title=element_text(size=rel(1.8)),
                                    legend.text=element_text(size=rel(1.1)))
 
+christmas_grids <- theme(panel.grid = element_line(color='#228b22'),
+                         panel.grid.major = element_line(colour='#228b22'))
+
 #for reshaping data a bit
 
 relevel_var <- function(data, var, lvls){
@@ -47,7 +50,9 @@ fix_factors <- function(data){
                                   'Southwest', 'West', 
                                   'I do not live in the United States')) %>%
     relevel_var('celebrates_christmas', c('Yes','No'))  %>%
-    mutate(region=mapvalues(region,from='I do not live in the United States', to='Non-US'))
+    mutate(region=mapvalues(region,from='I do not live in the United States', to='Non-US')) %>%
+    relevel_var('age_group', c('Under 18','18-24','25-34','35-44','45-54','55+')) %>% 
+    relevel_var('parent_gifts', c('Yes, and they claimed they were from Santa','Yes, but they didn\'t say they were from Santa','No'))
   
 }
 
