@@ -1,0 +1,112 @@
+
+
+<p> This December, I surveyed a 312 users from Reddit, Facebook, and, to a lesser extent, other social media sources on how they celebrated (or didn't celebrate) Christmas. You can find an active version of the survey <a href="https://docs.google.com/forms/d/e/1FAIpQLSchazyjPQHZFy67vtuKSHBt8ffv9LZCNW6-zTLqA0P1i3FHBQ/viewform?usp=sf_link#responses" target="_blank" id="christmas_survey_inarticle1_out">here </a>. I automatically generate a good portion of this article, so I may update it in the future.</p>
+
+<p> This is the first article using this data out of a few that I will be posting in the next few days. The primary goal of this article is to visualize the overall responses to some of the main questions, divide them into groups, and provide some commentary on them. The following articles will dive deeper into different aspects, including when kids learn that Santa isn't real, what words people use to describe Christmas, and various foods, desserts, and drinks that people consume.</p>
+
+<p> Note that with the exception of the logistic model at the very bottom, these graphs are representative of the data moreso than the general population.</p>
+
+
+
+<h2> Demographics </h2>
+
+<p> In the survey I asked about gender, religion, and region of the US (or outside the US). I did not include race, as I will be making the survey responses public, and that may provide too much identifying information for some people's comfort. The most notable demographic biases that are not particularly representative of the US as a whole are the overrepresentation of the Midwest, a large number of atheist/agnostic responders, as well as a notable percent of responders outside of the US.</p>
+
+
+<div class="chunk" id="demographics-gender"><div class="rimage default"><img src="/media/articles/christmas/demographics-gender-1.png" title="plot of chunk demographics-gender" alt="plot of chunk demographics-gender" class="plot" /></div></div>
+
+<div class="chunk" id="demographics-age"><div class="rimage default"><img src="/media/articles/christmas/demographics-age-1.png" title="plot of chunk demographics-age" alt="plot of chunk demographics-age" class="plot" /></div></div>
+
+<div class="chunk" id="demographics-religion"><div class="rimage default"><img src="/media/articles/christmas/demographics-religion-1.png" title="plot of chunk demographics-religion" alt="plot of chunk demographics-religion" class="plot" /></div></div>
+
+<div class="chunk" id="demographics-region"><div class="rimage default"><img src="/media/articles/christmas/demographics-region-1.png" title="plot of chunk demographics-region" alt="plot of chunk demographics-region" class="plot" /></div></div>
+
+<h2> Who Celebrates Christmas? </h2>
+
+<p> I also looked at who celebrates Christmas. Unsurprisingly, most of those who don't are not Christian. </p>
+
+#who celebrates christmas?
+<div class="chunk" id="celebration-overall"><div class="rimage default"><img src="/media/articles/christmas/celebration-overall-1.png" title="plot of chunk celebration-overall" alt="plot of chunk celebration-overall" class="plot" /></div></div>
+
+<div class="chunk" id="celebration-gender"><div class="rimage default"><img src="/media/articles/christmas/celebration-gender-1.png" title="plot of chunk celebration-gender" alt="plot of chunk celebration-gender" class="plot" /></div></div>
+
+<div class="chunk" id="celebration-age"><div class="rimage default"><img src="/media/articles/christmas/celebration-age-1.png" title="plot of chunk celebration-age" alt="plot of chunk celebration-age" class="plot" /></div></div>
+
+<div class="chunk" id="celebration-religion"><div class="rimage default"><img src="/media/articles/christmas/celebration-religion-1.png" title="plot of chunk celebration-religion" alt="plot of chunk celebration-religion" class="plot" /></div></div>
+
+<div class="chunk" id="celebration-region"><div class="rimage default"><img src="/media/articles/christmas/celebration-region-1.png" title="plot of chunk celebration-region" alt="plot of chunk celebration-region" class="plot" /></div></div>
+
+<h2> When do they celebrate Christmas? </h2>
+<p> Another question I asked is if an individual had a larger celebration on the 24th or 25th of December (or if they were about the same). One oversight when asking this question was not realizing that Eastern Orthodox Christmas is on January 6th, which is not an option.</p>
+
+<div class="chunk" id="date-overall"><div class="rimage default"><img src="/media/articles/christmas/date-overall-1.png" title="plot of chunk date-overall" alt="plot of chunk date-overall" class="plot" /></div></div>
+
+<div class="chunk" id="date-religion"><div class="rimage default"><img src="/media/articles/christmas/date-religion-1.png" title="plot of chunk date-religion" alt="plot of chunk date-religion" class="plot" /></div></div>
+  
+<h2> Activities on Christmas </h2>
+  <p> I also looked at some of the activities that users did on Christmas. </p>
+<div class="chunk" id="activities-overall"><div class="rimage default"><img src="/media/articles/christmas/activities-overall-1.png" title="plot of chunk activities-overall" alt="plot of chunk activities-overall" class="plot" /></div></div>
+
+<div class="chunk" id="activities-bycelebration"><div class="rimage default"><img src="/media/articles/christmas/activities-bycelebration-1.png" title="plot of chunk activities-bycelebration" alt="plot of chunk activities-bycelebration" class="plot" /></div></div>
+
+<div class="chunk" id="activities-gender"><div class="rimage default"><img src="/media/articles/christmas/activities-gender-1.png" title="plot of chunk activities-gender" alt="plot of chunk activities-gender" class="plot" /></div></div>
+
+<div class="chunk" id="activities-age"><div class="rimage default"><img src="/media/articles/christmas/activities-age-1.png" title="plot of chunk activities-age" alt="plot of chunk activities-age" class="plot" /></div></div>
+
+<div class="chunk" id="activities-religion"><div class="rimage default"><img src="/media/articles/christmas/activities-religion-1.png" title="plot of chunk activities-religion" alt="plot of chunk activities-religion" class="plot" /></div></div>
+
+#by region
+<div class="chunk" id="activities-region"><div class="rimage default"><img src="/media/articles/christmas/activities-region-1.png" title="plot of chunk activities-region" alt="plot of chunk activities-region" class="plot" /></div></div>
+
+<h2> Which people hang out with their friends the most?</h2>
+
+<p> Looking at the above graphs, there are some correlations that have to do with oversampling from certain regions. For example, there are a high number of Evangelical Christian responses from the midwest, which is not representative of the overall structure of the survey. A statistical technique known as <a href="https://simple.wikipedia.org/wiki/Logistic_Regression" target="_blank" id="simplewiki_logistic_regression_out">logistic regression</a> can be used to determine what factors influence an outcome. In this case, I am testing to see if region, religion, gender, and/or celebration of Christmas affect individuals hanging out with friends on Christmas, since that is one of the categories that seems to have interesting correlations in the above graph.</p>  
+
+<p> Below is a snippet of code I used to test this out.</p>
+<!--
+#hmmm, so what makes someone more likely to actually spend time with friends/attend religious service?
+service_model = step(glm(activities_Attend.religious.service ~ religion + region + celebrates_christmas + gender + age_group, 
+                         family=binomial,
+                         data=survey_categories), 
+             k=log(nrow(survey)),
+             direction='both')
+-->
+<div class="chunk" id="friends_model"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl std">friends_model</span> <span class="hl kwb">=</span> <span class="hl kwd">step</span><span class="hl std">(</span><span class="hl kwd">glm</span><span class="hl std">(activities_Spend.time.with.friends</span> <span class="hl opt">~</span> <span class="hl std">religion</span> <span class="hl opt">+</span> <span class="hl std">region</span> <span class="hl opt">+</span> <span class="hl std">celebrates_christmas</span> <span class="hl opt">+</span> <span class="hl std">gender</span> <span class="hl opt">+</span> <span class="hl std">age_group,</span>
+                         <span class="hl kwc">family</span><span class="hl std">=binomial,</span>
+                         <span class="hl kwc">data</span><span class="hl std">=survey_categories),</span>
+                     <span class="hl kwc">k</span><span class="hl std">=</span><span class="hl kwd">log</span><span class="hl std">(</span><span class="hl kwd">nrow</span><span class="hl std">(survey)),</span>
+                     <span class="hl kwc">direction</span><span class="hl std">=</span><span class="hl str">'both'</span><span class="hl std">,</span> <span class="hl kwc">trace</span><span class="hl std">=</span><span class="hl num">0</span><span class="hl std">)</span>
+
+<span class="hl kwd">summary</span><span class="hl std">(friends_model)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## 
+## Call:
+## glm(formula = activities_Spend.time.with.friends ~ celebrates_christmas, 
+##     family = binomial, data = survey_categories)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -0.9405  -0.9405  -0.9405   1.4345   1.9728  
+## 
+## Coefficients:
+##                        Estimate Std. Error z value Pr(&gt;|z|)    
+## (Intercept)             -0.5867     0.1254  -4.679 2.88e-06 ***
+## celebrates_christmasNo  -1.2051     0.4991  -2.415   0.0157 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 397.18  on 311  degrees of freedom
+## Residual deviance: 389.87  on 310  degrees of freedom
+## AIC: 393.87
+## 
+## Number of Fisher Scoring iterations: 4
+</pre></div>
+</div></div>
+
+<p> It turns out that the only significant factor in determining if one is more likely to spend time on Christmas with friends is whether or not they celebrate Christmas to begin with. I am guessing those who don't do not know too many people who aren't celebrating that day or are otherwise apathetic.</p>
+
+<h2> Source Code </h2>
+
+<p> I have the source code for my analysis on GitHub <a href="https://github.com/mcandocia/ChristmasSurvey" id="github_christmassurvey_out" target="_blank">here</a>. All the responses (after removing timestamp/order info) will be released once I finish my article series.</p>
