@@ -1,0 +1,74 @@
+
+<!--begin.rcode words-setup, warning=FALSE, message=FALSE, echo=FALSE
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(reshape2)
+library(scales)
+library(cetcolor)
+library(tm)
+library(wordcloud)
+source('../plotting_functions.r')
+
+survey = read.csv('../data/clean_survey.csv') %>% fix_factors() %>%
+  mutate(description=as.character(description))
+
+#functions to transform words
+map_words <- function(text){
+  text %>% 
+    VectorSource %>%
+    Corpus %>%
+    tm_map(tolower) %>%
+    tm_map(removeWords, stopwords('english') )
+}
+
+comp.wordcloud <- function(data, scale=c(10,1), ...){
+  wordcloud(data$description %>% map_words, colors=c(cet_pal(12), '#F00101'),
+            scale=scale, random.order=FALSE, ...)
+}
+
+ntitle <- function(text, cex=1.5, n_newline=4){
+  title(paste0(paste(rep('\n', n_newline), collapse=''), text), cex.main=cex)
+}
+end.rcode-->
+
+<p> This December, I surveyed 312 users from Reddit, Facebook, and, to a lesser extent, other social media sources on how they celebrated (or didn't celebrate) Christmas. You can find an active version of the survey <a href="https://docs.google.com/forms/d/e/1FAIpQLSchazyjPQHZFy67vtuKSHBt8ffv9LZCNW6-zTLqA0P1i3FHBQ/viewform?usp=sf_link#responses" target="_blank" id="christmas_survey_inarticle1_out">here </a>. I automatically generate a good portion of this article, so I may update it in the future.</p>
+
+<p> This is the third (and shortest) article in the series. Here, I show some word clouds to the prompt: "Describe Christmas in three words". I have an overall word cloud, followed by four more word clouds that consist of the following:</p>
+
+<ol>
+<li> People who don't celebrate Christmas </li>
+<li> People who are atheist/agnostic </li>
+<li> Christians of any kind </li>
+<li> People who follow non-Christian religions </li>
+</ol>
+
+<h2> Word Clouds </h2>
+
+<!--begin.rcode words-all, fig.width=8, fig.height=8, warning=FALSE, message=FALSE, echo=FALSE
+comp.wordcloud(survey)
+ntitle('How People Describe Christmas')
+end.rcode-->
+
+<!--begin.rcode words-non-celebrators, fig.width=8, fig.height=10, warning=FALSE, message=FALSE, echo=FALSE
+comp.wordcloud(survey %>% filter(celebrates_christmas=="No"), scale=c(3.8,0.9),min.freq=1)
+ntitle('How people who don\'t celebrate Christmas describe it', n_newline=1)
+end.rcode-->
+
+<!--begin.rcode words-atheist, fig.width=8, fig.height=7.5, warning=FALSE, message=FALSE, echo=FALSE
+comp.wordcloud(survey %>% filter(religion=='Atheist/agnostic'))
+ntitle('How atheist/agnostic persons describe Christmas')
+end.rcode-->
+
+<!--begin.rcode words-christian, fig.width=8, fig.height=7.5, warning=FALSE, message=FALSE, echo=FALSE
+comp.wordcloud(survey %>% filter(grepl('Christ',religion)))
+ntitle('How Christains describe Christmas')
+end.rcode-->
+
+<!--begin.rcode words-other-religion, fig.width=8, fig.height=8.1, warning=FALSE, message=FALSE, echo=FALSE
+comp.wordcloud(survey %>% filter(religion %in% c('Judaism',"Other")), min.freq=1, scale=c(6,0.95))
+ntitle('How followers of non-Christian religions describe Christmas')
+end.rcode-->
+<h2> Source Code </h2>
+
+<p> I have the source code for my analysis on GitHub <a href="https://github.com/mcandocia/ChristmasSurvey" id="github_christmassurvey_out" target="_blank">here</a>. All the responses (after removing timestamp/order info) will be released once I finish my article series.</p>
