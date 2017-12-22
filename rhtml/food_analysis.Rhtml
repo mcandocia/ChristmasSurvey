@@ -1,0 +1,309 @@
+<!--begin.rcode food.setup, message=FALSE, echo=FALSE, warning=FALSE
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(reshape2)
+library(scales)
+library(cetcolor)
+library(ape)
+source('../plotting_functions.r')
+
+
+survey = read.csv('../data/clean_survey.csv') %>% fix_factors()
+survey_categories = read.csv('../data/survey_categories.csv') %>% fix_factors() %>%
+  filter(celebrates_christmas=="Yes") %>% 
+  mutate(desserts_pie..any. = desserts_pie..any. | desserts_pie..pecan. | desserts_pie..apple. | desserts_pie..pumpkin.)
+
+#gather data for visualization
+foods = gather_category(survey_categories, 'foods_')
+foods = foods %>% 
+  mutate(foods = mapvalues(foods, from=c('', 'stuffing dressing'), to=c('None of the Above','stuffing/dressing')),
+                                celebrates_christmas = mapvalues(celebrates_christmas, 
+                                                                 from=c('Yes','No'), 
+                                to = c('Celebrates Christmas','Doesn\'t Celebrate Christmas')))
+
+
+#beverages
+beverages = gather_category(survey_categories, 'beverages_')
+beverages = beverages %>% mutate(beverages = mapvalues(beverages, from='', to='None of the Above'),
+                                   celebrates_christmas = mapvalues(celebrates_christmas, from=c('Yes','No'), 
+                                   to = c('Celebrates Christmas','Doesn\'t Celebrate Christmas')))
+
+desserts = gather_category(survey_categories, 'desserts_')
+desserts = desserts %>% mutate(desserts = mapvalues(desserts, from='', to='None of the Above'),
+                                 celebrates_christmas = mapvalues(celebrates_christmas, from=c('Yes','No'), 
+                                 to = c('Celebrates Christmas','Doesn\'t Celebrate Christmas'))) %>%
+  mutate(desserts = mapvalues(desserts, from=levels(desserts), to=gsub('pie (\\w+)','pie (\\1)', levels(desserts))))
+
+
+select.not_na <- function(...){
+ dots = list(...)
+ result = character(length(dots[[1]]))
+ for (i in 1:length(dots)){
+   result = ifelse(is.na(dots[[i]]), result, as.character(dots[[i]]))
+ }
+ result
+}
+
+#similarity functions and their matrix-row wrappers (with an extra _ at the end)
+cosine_similarity <- function(x, y){
+  as.numeric(x %*% y /sqrt(sum(x^2)*sum(y^2)))
+}
+
+cosine_similarity_ <- function(i, j, m){
+  cosine_similarity(m[i,], m[j,])
+}
+
+jaccard_similarity <- function(x, y){
+  sum(x & y)/sum(x | y)
+}
+
+jaccard_similarity_ <- function(i, j, m){
+  jaccard_similarity(m[i,],m[j,])
+}
+
+##let's do some regional clustering :-)
+#we can do regional clustering by using calculated group stats and using cosine similarity
+#between the percentages
+region_food_stats = rbind(
+  foods %>% calculate_group_stats('foods',group_variables='region') %>% 
+    mutate(desserts=mapvalues(foods, from="None of the Above", to="None of the Above (foods)")),
+  beverages %>% calculate_group_stats('beverages',group_variables='region') %>% 
+    mutate(desserts=mapvalues(beverages, from="None of the Above", to="None of the Above (beverages)")),
+  desserts %>% calculate_group_stats('desserts',group_variables='region') %>% 
+    mutate(desserts=mapvalues(desserts, from="None of the Above", to="None of the Above (desserts)"))
+) %>% mutate(item = factor(select.not_na(foods, beverages, desserts)), beverages=NULL, foods=NULL, desserts=NULL)
+
+general_food_stats = rbind(
+  foods %>% calculate_group_stats('foods',group_variables='id') %>% 
+    mutate(desserts=mapvalues(foods, from="None of the Above", to="None of the Above (foods)")),
+  beverages %>% calculate_group_stats('beverages',group_variables='id') %>% 
+    mutate(desserts=mapvalues(beverages, from="None of the Above", to="None of the Above (beverages)")),
+  desserts %>% calculate_group_stats('desserts',group_variables='id') %>% 
+    mutate(desserts=mapvalues(desserts, from="None of the Above", to="None of the Above (desserts)"))
+) %>% mutate(item = factor(select.not_na(foods, beverages, desserts)), beverages=NULL, foods=NULL, desserts=NULL)
+
+calculate_distance_matrix <- function(data, formula, value.var, sim.function=cosine_similarity_){
+  wide_matrix = acast(data, formula, value.var = value.var)
+  distmat = 1 - outer(1:nrow(wide_matrix), 1:nrow(wide_matrix), 
+                      FUN=Vectorize(cosine_similarity_, vectorize.args=c('i','j')), 
+                      m=wide_matrix)
+  rownames(distmat) = colnames(distmat) = rownames(wide_matrix)
+  return(as.dist(distmat))
+}
+
+#cosine distance
+region_distance_matrix = calculate_distance_matrix(region_food_stats, region~item, value.var="prop")
+
+item_distance_matrix = calculate_distance_matrix(region_food_stats, item~region, value.var="prop")
+
+#use jaccard with items...
+item_jaccard_matrix = calculate_distance_matrix(general_food_stats, item~id, value.var="prop", jaccard_similarity_)
+
+##let's cluster foods, beverages, and desserts together :P
+region_clust = hclust(region_distance_matrix, method='ward.D2')
+item_clust_cosine = hclust(item_distance_matrix, method='ward.D2')
+item_clust_jaccard = hclust(item_jaccard_matrix, method='ward.D2')
+
+end.rcode-->
+
+
+<p> This December, I surveyed a 312 users from Reddit, Facebook, and, to a lesser extent, other social media sources on how they celebrated (or didn't celebrate) Christmas. You can find an active version of the survey <a href="https://docs.google.com/forms/d/e/1FAIpQLSchazyjPQHZFy67vtuKSHBt8ffv9LZCNW6-zTLqA0P1i3FHBQ/viewform?usp=sf_link#responses" target="_blank" id="christmas_survey_inarticle1_out">here </a>. I automatically generate a good portion of this article, so I may update it in the future.</p>
+
+<p> This is the fourth article in the series, where I analyze the foods, drinks, and desserts people consume on Christmas, both as a whole and by region of the US (or outside the US).</p>
+
+<p> The first part will look at proportions of food, drink, and dessert overall and by region. The second part will cluster the regions and the various food, beverage, and dessert items (this is actually pretty cool).</p>
+
+<h2 id="christmas_foods"> Christmas Foods </h2>
+
+<p> Among Christmas foods, bread rolls and mashed potatoes were the most common in the set, even across different regions of the US. Mac 'n cheese is more common in the Southeast and, to some degree, the Southwest, and prime rib only seems really common in the West. </p>
+
+<!--begin.rcode foods-food-overall, fig.width=10, fig.height=5.4, warning=FALSE, message=FALSE, echo=FALSE
+#look at foods
+#overall
+ggplot(foods %>% 
+         calculate_group_stats('foods', 
+                               group_variables=NULL)) +
+  geom_bar(aes(x=foods, y=prop), stat='identity', fill='#228b22') + 
+  scale_y_continuous(label=percent) + xlab('') + ylab('') + 
+  geom_text(aes_(x=~foods, y=~prop, label=bquote(.(smart_percent)(prop, count))), hjust='inward', size=6) + 
+  ggtitle('Question: What foods do you eat on Christmas?') + theme_bw() + 
+  coord_flip() + better_text_size
+end.rcode-->
+
+<!--begin.rcode foods-food-region, fig.width=10, fig.height=5.4, warning=FALSE, message=FALSE, echo=FALSE
+#by region
+ggplot(foods %>% 
+         calculate_group_stats('foods', 
+                               group_variables='region')) +
+  geom_tile(aes(x=region, y=foods, fill=prop)) + 
+  geom_text(aes_(x=~region, y=~foods, 
+                 label=bquote(.(smart_percent)(prop, count))), size=3.5) + theme_bw() + 
+  ggtitle('Question: What foods do you eat on Christmas?', subtitle='Grouped by region') + 
+  better_text_size_tiled + 
+  scale_fill_gradientn('', colors=cet_pal(9, 'diverging_gwr_55-95_c38_n256'), label=percent) + 
+  theme(axis.text.x = element_text(angle=0))
+end.rcode-->
+
+<h2 id="beverages"> Christmas Beverages </h2>
+
+<p> Among the beverages listed in the survey, apple cider seems to have the most regional variation among any of them, with a majority of responses from the West indicating they drank it on Christmas.</p>
+<!--begin.rcode foods-beverage-overall, fig.width=10, fig.height=5.4, warning=FALSE, message=FALSE, echo=FALSE
+
+#look at beverages
+#overall
+ggplot(beverages %>% 
+         calculate_group_stats('beverages', 
+                               group_variables=NULL)) +
+  geom_bar(aes(x=beverages, y=prop), stat='identity', fill='#228b22') + 
+  scale_y_continuous(label=percent) + xlab('') + ylab('') + theme_bw() + 
+  geom_text(aes_(x=~beverages, y=~prop, label=bquote(.(smart_percent)(prop, count))), hjust='inward', size=6) + 
+  ggtitle('Question: What beverages do you drink on \nChristmas?') + 
+  coord_flip() + better_text_size
+end.rcode-->
+
+<!--begin.rcode foods-beverage-region, fig.width=10, fig.height=5.4, warning=FALSE, message=FALSE, echo=FALSE
+#by region
+ggplot(beverages %>% 
+         calculate_group_stats('beverages', 
+                               group_variables='region')) +
+  geom_tile(aes(x=region, y=beverages, fill=prop)) + theme_bw() + 
+  geom_text(aes_(x=~region, y=~beverages, 
+                 label=bquote(.(smart_percent)(prop, count))), size=3.5) + 
+  ggtitle('Question: What beverages do you drink on Christmas?', subtitle='Grouped by region') + 
+  better_text_size_tiled + 
+  scale_fill_gradientn('', colors=cet_pal(9, 'diverging_gwr_55-95_c38_n256'), label=percent) + 
+  theme(axis.text.x = element_text(angle=0))
+end.rcode-->
+
+<h2 id="desserts"> Christmas Desserts </h2>
+
+<p> As far as desserts go, it seems cookies and pie art the most common in the US. Interestingly, gingerbread isn't quite as common, except among non-US responses, where 50% had gingerbread on Christmas. 
+<!--begin.rcode foods-dessert-overall, fig.width=10, fig.height=5.4, warning=FALSE, message=FALSE, echo=FALSE
+#look at desserts
+#overall
+ggplot(desserts %>% 
+         calculate_group_stats('desserts', 
+                               group_variables=NULL)) +
+  geom_bar(aes(x=desserts, y=prop), stat='identity', fill='#228b22') + 
+  scale_y_continuous(label=percent) + xlab('') + ylab('') + theme_bw() + 
+  geom_text(aes_(x=~desserts, y=~prop, label=bquote(.(smart_percent)(prop, count))), hjust='inward', size=6) + 
+  ggtitle('Question: What desserts do you eat on \nChristmas?') + 
+  coord_flip() + better_text_size
+end.rcode-->
+
+<!--begin.rcode foods-dessert-region, fig.width=10, fig.height=5.4, warning=FALSE, message=FALSE, echo=FALSE
+#by region
+ggplot(desserts %>% 
+         calculate_group_stats('desserts', 
+                               group_variables='region')) +
+  geom_tile(aes(x=region, y=desserts, fill=prop)) + theme_bw() + 
+  geom_text(aes_(x=~region, y=~desserts, 
+                 label=bquote(.(smart_percent)(prop, count))), size=3.5) + 
+  ggtitle('Question: What desserts do you eat on Christmas?', subtitle='Grouped by region') + 
+  better_text_size_tiled + 
+  scale_fill_gradientn('', colors=cet_pal(9, 'diverging_gwr_55-95_c38_n256'), label=percent) + 
+  theme(axis.text.x = element_text(angle=0))
+end.rcode-->
+
+<h2 id="region_clustering"> Clustering Regions </h2>
+
+<p> One interesting thing that can be done with these survey responses is clustering. In this case, clustering involves measuring similarities between different things, such as a region of the US or a food/drink item, and then making connections between those things with the similarities, starting with the most similar objects first. When two objects are connected, they form a group, and you can measure the similarity between groups in a similar way.</p>
+
+<p> This first graph is a visualization of a "similarity matrix"  between regions. I measured the similarity using the percentage of people from that region that consumed each food/drink/dessert. From this graph, it seems like the least similar regions are the US regions vs. outside the US (Non-US in the graph).</p>
+<!--begin.rcode foods-region-simmat, fig.width=10, fig.height=5.4, warning=FALSE, message=FALSE, echo=FALSE
+#time to plot CLUSTERING
+refactor_by_cluster <- function(data, cluster){
+  data %>% mutate(Var1 = factor(Var1, levels = levels(Var1)[cluster$order]),
+                  Var2 = factor(Var2, levels = levels(Var2)[cluster$order])
+  )
+}
+
+
+#region clust
+ggplot(melt(as.matrix(1-as.matrix(region_distance_matrix))) %>%
+         refactor_by_cluster(region_clust)
+       ) + 
+  geom_tile(aes(x=Var1, y=Var2, fill=value)) + 
+  scale_fill_gradientn('similarity\n', colors=cet_pal(9, 'linear_blue_5-95_c73_n256'),
+                       limits = 0:1) + 
+  xlab('') + ylab('') + 
+  ggtitle('Similarity of Regions by Food, Drink, and Desserts\nConsumed on Christmas')
+
+end.rcode-->
+
+<p> Below is a dendrogram. Objects that are connected closest to each other are the most similar, and objects that connect to groups at a lower level (further to the right) are closer to that group than they are other groups.</p>
+
+<p> In this case, the Midwest and Northeast are the closest to each other in terms of Christmas cuisine. Then, the type of food and drink becomes more distinct when you look at the Southeast, West, Southwest, and finally, outside the US.</p>
+
+<!--begin.rcode foods-region-phylo, fig.width=10, fig.height=5.4, warning=FALSE, message=FALSE, echo=FALSE
+
+plot(as.phylo(region_clust), 
+     main="Clusters of US Regions by Similarity of Food, Drink, and Desserts\nConsumed on Christmas")
+end.rcode-->
+
+<h2 id="item_clustering1"> Clustering Foods, Drinks, and Beverages by Region Similarity </h2>
+
+<p> In addition to clustering region by cuisine, you can cluster cuisine by region. What this does is it shows which foods are more strongly correlated across regions. The lighter square regions of this similarity matrix represent groups of food and drinks that are commonly found in specific regions.</p>
+
+<!--begin.rcode foods-item-simmat1, fig.width=10, fig.height=8.4, warning=FALSE, message=FALSE, echo=FALSE
+#item clust
+
+ggplot(melt(as.matrix(1-as.matrix(item_distance_matrix))) %>% 
+         refactor_by_cluster(item_clust_cosine)) + 
+  geom_tile(aes(x=Var1, y=Var2, fill=value)) + 
+  scale_fill_gradientn('similarity\n', colors=cet_pal(9, 'linear_blue_5-95_c73_n256'),
+                       limits = 0:1) + 
+  xlab('') + ylab('') + 
+  ggtitle('Similarity of  Food, Drink, and Desserts\nConsumed on Christmas by Correlation within Regions') + 
+  theme(axis.text.x = element_text(angle=90, hjust=1)) 
+end.rcode-->
+
+<p> Below is a dendrogram of the above matrix, with many different clusters formed. Items that are next to each other are either likely to be found in the same region together. Conversely, if one is not popular in a region, the other is also less likely to be as popular within that region. </p>
+
+<p> A good example here is pecan pie and macaroni and cheese being grouped together. Both are more strongly associated with the Southern US, which makes their close grouping unsurprising.</p>
+
+<!--begin.rcode foods-item-phylo1, fig.width=10, fig.height=8.4, warning=FALSE, message=FALSE, echo=FALSE
+tree = cutree(item_clust_cosine, k=8)
+tree_colors = c('red','blue','DarkGreen','black', 'magenta')
+
+plot(as.phylo(item_clust_cosine), 
+     main="Clusters of Food, Drink, and Desserts\nConsumed on Christmas by Correlation within Regions",
+     tip.color = tree_colors[tree %% 5 + 1])
+end.rcode-->
+
+<h2 id="item_clustering2">Clustering Foods, Drinks and Beverages by Individual Consumption </h2>
+
+<p> In addition to grouping cuisine by region, you can also use individual responses for clustering. In this case, I use the <a href="https://en.wikipedia.org/wiki/Jaccard_index" id="wiki_jaccard_index_out" target="_blank">Jaccard index</a> to calculate which foods share the most individuals with other foods. </p>
+
+<p> For example, if Alice and Bob like candy canes, and Bob and Clark like gingerbread, then gingerbread is somewhat similar to candy canes because Bob likes them both, but not too similar, since Alice and Clark  like candy canes and gingerbread, respectively, but not both.</p>
+
+<!--begin.rcode foods-item-simmat2, fig.width=10, fig.height=8.4, warning=FALSE, message=FALSE, echo=FALSE
+#item clust jaccard
+
+ggplot(melt(as.matrix(1-as.matrix(item_jaccard_matrix))) %>%
+         refactor_by_cluster(item_clust_jaccard)) + 
+  geom_tile(aes(x=Var1, y=Var2, fill=value)) + 
+  scale_fill_gradientn('similarity\n', colors=cet_pal(9, 'linear_blue_5-95_c73_n256'),
+                       limits = 0:1) + 
+  xlab('') + ylab('') + 
+  ggtitle('Similarity of  Food, Drink, and Desserts\nConsumed on Christmas by Consumption of Individuals') + 
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+end.rcode-->
+
+<p> What's interesting here is how different the clustering is from the region-based clustering. There are some similarities that remain, such as the turkey + stuffing/dressing combination, but it looks like foods that are more similar to each other tend to be grouped closer together than before. This makes sense, since individuals who like foods similar to each other would definitely eat both at a large feast.</p>
+
+<p> It also appears that individuals who didn't have any foods, beverages, or desserts listed often had that issue across the three categories. It may have been a result of skipping over the question (I made it optional), or it could be the US-focused nature of the food &amp; drink list I provided.</p>
+
+<!--begin.rcode foods-item-phylo2, fig.width=10, fig.height=8.4, warning=FALSE, message=FALSE, echo=FALSE
+tree = cutree(item_clust_jaccard, k=4)
+
+plot(as.phylo(item_clust_jaccard), 
+     main="Clusters of Food, Drink, and Desserts\nConsumed on Christmas by Consumption of Individuals",
+     tip.color = tree_colors[tree])
+end.rcode-->
+
+
+<h2> Source Code </h2>
+
+<p> I have the source code for my analysis on GitHub <a href="https://github.com/mcandocia/ChristmasSurvey" id="github_christmassurvey_out" target="_blank">here</a>. All the responses (after removing timestamp/order info) will be released once I finish my article series.</p>
