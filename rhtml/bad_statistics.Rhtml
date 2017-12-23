@@ -1,0 +1,132 @@
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<style> 
+.top{background-color:Forestgreen;}
+.hidden{display:none;}
+.unhidden{display:block;}
+#good_bad_explanation_href{
+  font-style:none;
+}
+</style>
+
+
+<!--begin.rcode badstats-setup, echo=FALSE, message=FALSE, warning=FALSE
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(reshape2)
+library(scales)
+library(cetcolor)
+source('../plotting_functions.r')
+library(sjPlot)
+
+
+survey = read.csv('../data/clean_survey.csv') %>% fix_factors()
+survey = survey %>% 
+  mutate(santa_not_real_age = as.numeric(santa_not_real_age),
+         santa_not_real_age = ifelse(is.na(santa_not_real_age), 0, santa_not_real_age)) %>%
+  split_factor_levels_with_newlines('religion') %>%
+  split_factor_levels_with_newlines('religion_pre18')
+
+#rename some variables
+survey$`Did parents buy you gifts for Christmas?` = survey$parent_gifts
+survey$`What age did you find out Santa wasn't real?` = survey$santa_not_real_age
+survey$`Religion before turning 18` = survey$religion_pre18
+
+#let's figure out if Santa has anything to do with switching religions...
+
+#visualize religion matrix
+
+religions = melt(table(survey$religion_pre18, 
+       survey$religion)) %>% 
+  group_by(Var1) %>% 
+  mutate(prop = value/sum(value))
+end.rcode-->
+
+
+<p> This December, I surveyed a 312 users from Reddit, Facebook, and, to a lesser extent, other social media sources on how they celebrated (or didn't celebrate) Christmas. You can find an active version of the survey <a href="https://docs.google.com/forms/d/e/1FAIpQLSchazyjPQHZFy67vtuKSHBt8ffv9LZCNW6-zTLqA0P1i3FHBQ/viewform?usp=sf_link#responses" target="_blank" id="christmas_survey_inarticle1_out">here </a>. I automatically generate a good portion of this article, so I may update it in the future.</p>
+
+<p> This is the fifth and final article, and I'm keeping it short and sweet. I'm going to use statistics to show that Santa makes kids turn away from Christianity when they become an adult. Totally not abusing any methodology. </p>
+
+<h2> Religious Transitions </h2>
+
+<p> Below is a plot of the religions that respondents were before 18 and their current religion. The diagonal is fairly high, although, apart from atheism/agnosticism, there are many off-diagonal elements that indicate someone switched religions, including between different sects of Christianity. </p>
+
+<!--begin.rcode badstats-religion-matrix, fig.width=10, fig.height=10, warning=FALSE, message=FALSE, echo=FALSE
+ggplot(religions) + geom_tile(aes(x=Var2,y=Var1, fill=prop)) +
+  geom_text(aes_(x=~Var2,  y=~Var1, label=bquote(.(smart_percent)(prop, value))), size=4.6) + 
+  scale_fill_gradientn('Proportion', label=percent, 
+                      colors=cet_pal(9, 'rainbow_bgyr_35-85_c72_n256')) +
+  xlab('Current Religion') + ylab('Religion Before Age 18') + 
+  theme(axis.text.x = element_text(angle=0)) + 
+  better_text_size_tiled +
+  ggtitle('Religions of Christmas Survey Respondents')
+
+#let's take 2 subsets of data
+#1) Christians before 18, no longer Christian
+#2) Christians before 18, currently Christian (basically Christians)
+
+christians = survey %>% filter(grepl('Christ', religion_pre18)) %>%
+  mutate(final_religion = factor(ifelse(grepl('Christ',religion), 'Christian', 'Non-Christian')))
+
+model = glm(final_religion ~ `What age did you find out Santa wasn't real?` + 
+              `Did parents buy you gifts for Christmas?` + region + gender, 
+    data=christians,
+    family=binomial)
+#summary(model)
+end.rcode-->
+
+<p> Taking all responses from people who were Christian before turning 18 and are now 18 or older, a sample size of 194, I construct a <a href="https://simple.wikipedia.org/wiki/Logistic_Regression" id="simplewiki_logistic_out" target="_blank">logistic model</a> to determine the effects of parents telling their kids Santa is real, controlling for gender and region of the US. I do not consider transitions from one form of Christianity to another as leaving Christianity.</p>
+
+<h5><b> Note: blue means more likely to turn away, red means less likely to turn away </b> </h5>
+
+<!--begin.rcode badstats-badmodel, fig.width=10, fig.height=10, warning=FALSE, message=FALSE, echo=FALSE
+sjp.glm(model, type='or',
+        title=paste0('Effects of demographics and Santa on Likelihood of No Longer Being Christian After Childhood\n(references are midwest,',
+        ' female, and parents told child that presents were from Santa)'))
+end.rcode-->
+
+<p> Oh, no! Look at that figure on the bottom. Apparently kids who were told they got gifts from Santa were up to 2.5 (1/0.4) times as likely to change religions than kids who got gifts and were not told that Ol' Saint Nick brought them. It even has a star next to the number, which means that it is <i><b> STATISTICALLY SIGNIFICANT</b></i> at the 95% confidence level. You probably want to keep them away from the West Coast and other countries, too.</p> 
+
+<div id="hidden_model_div">
+<a href="#good_bad_explanation" id="good_bad_explanation_href"><h6 id="click_to_unhide"> Click Here for a half-decent model and an explanation of why the above should not be taken at face value</h6></a>
+<div class="hidden" id="hidden_div">
+
+<h2 id="good_bad_explanation"> Why is the above incorrect &amp; misleading?</h2>
+<p> In reality it's mostly religion that impacts the probability. I was abusing which control parameters I used to get the desired effect. This is one form of what is known as <a href="https://en.wikipedia.org/wiki/Data_dredging" target="_blank" id="wiki_datadredging_out">p-hacking</a>.</p>
+
+<p>Also, the "odds ratio" will seldom have an impact near a 2.5x change in probability unless the probability is already really low. Odds are defined as the ratio of one probability to the other, so 50/50 would be 1:1 or 1, and 40/60 would be 2:3 or 2/3. </p>
+
+<p>The <i>odds ratio</i> is the ratio of two different odds before and after a certain effect. </p>
+
+<p>For example, if the "default" probability is 50/50, that has an odds of 1:1, or 1. An odds ratio of 0.4 would change that to (50 * 0.4)/50 = 20/50, which has to be scaled to 2/7 and 5/7 in order to be an actual probability, or about 28% and 72%, respectively. That is only a 30% decrease and 44% increase in the probabilities/likelihood. So, while that can still be a noticeable effect, it is far from the 2.5, or 150% change that I weaseled in with "up to" above.</p>
+
+<p> The below model is a result of using religion as a predictor, which shows that Evangelical Christianity is much less likely to change religions than other branches of Christianity. No other variables were significant, including how frequently the responder attended religious service as a child. That variable did not even make it past the stepwise selection process for choosing variables.</p>
+
+<p> The data is a bit biased in sampling as far as religion goes, though, so do not take this too seriously. </p>
+<!--begin.rcode badstats-goodmodel, fig.width=10, fig.height=10, warning=FALSE, message=FALSE, echo=FALSE
+#actually a decent model
+good_model = step(glm(final_religion ~ `What age did you find out Santa wasn't real?` + 
+              `Did parents buy you gifts for Christmas?` + region + gender + `Religion before turning 18` + religious_service_attendance_pre18, 
+            data=christians,
+            family=binomial),
+            k=2, 
+            direction="both", 
+            trace=0)
+#summary(good_model)
+sjp.glm(good_model,cex=1.3,
+        title=paste0('Effects of demographics and Santa on Likelihood of No Longer Being Christian After Childhood\n(references are midwest,',
+                           ' Catholic, female, and parents told child that presents were from Santa)'))
+
+end.rcode-->   
+</div>
+<script>
+$('#click_to_unhide').click(function(){
+$('#hidden_div').toggleClass('hidden');
+$('#hidden_div').toggleClass('unhidden');
+});
+</script>
+</div>
+
+<h2> Source Code </h2>
+
+<p> I have the source code for my analysis on GitHub <a href="https://github.com/mcandocia/ChristmasSurvey" id="github_christmassurvey_out" target="_blank">here</a>. All the responses (after removing timestamp/order info) will be released once I finish my article series.</p>
