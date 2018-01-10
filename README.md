@@ -17,3 +17,7 @@ The following files are used in the corresponding analyses on my website:
 * `food_analysis.r` - [Clustering of food & drink people consume on Christmas](http://maxcandocia.com/article/2017/Dec/22/analyzing-christmas-food/)
 
 * `rhtml/bad_statistics.Rhtml` - [File used to generate satirical piece](http://maxcandocia.com/article/2017/Dec/23/unpleasant-stats-santa-turns-kids-from-christianity/)
+
+The following file provides utility functions and variables for plotting for other files:
+
+* `plotting_functions.r`
